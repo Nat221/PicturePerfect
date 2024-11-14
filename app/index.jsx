@@ -3,6 +3,7 @@ import {
   Text,
   Button,
   PermissionsAndroid,
+  Platform,
   Alert,
   TouchableOpacity,
 } from 'react-native';
@@ -32,26 +33,46 @@ const CameraScreen = () => {
       try {
         await initialize();
         console.log('Wifi P2P initialized');
-        const granted = await PermissionsAndroid.requestMultiple([
-          PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+        if (Platform.Version >= 33) {
+          const granted = await PermissionsAndroid.requestMultiple([
+            PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
 
-          PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION,
-          PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES,
-        ]);
-        console.log(granted);
+            PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION,
+            PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES,
+          ]);
+          console.log(granted);
 
-        if (
-          granted[PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION] !==
-            PermissionsAndroid.RESULTS.GRANTED ||
-          granted[PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION] !==
-            PermissionsAndroid.RESULTS.GRANTED ||
-          granted[PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES] !==
-            PermissionsAndroid.RESULTS.GRANTED
-        ) {
-          return Alert.alert(
-            'Permission denied',
-            'Unable to use P2P Wifi without permission',
-          );
+          if (
+            granted[PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION] !==
+              PermissionsAndroid.RESULTS.GRANTED ||
+            granted[
+              PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION
+            ] !== PermissionsAndroid.RESULTS.GRANTED ||
+            granted[PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES] !==
+              PermissionsAndroid.RESULTS.GRANTED
+          ) {
+            return Alert.alert(
+              'Permission denied',
+              'Unable to use P2P Wifi without permission',
+            );
+          }
+        } else {
+          const granted = await PermissionsAndroid.requestMultiple([
+            PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          ]);
+
+          if (
+            granted[PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION] !==
+              PermissionsAndroid.RESULTS.GRANTED ||
+            granted[PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION] !==
+              PermissionsAndroid.RESULTS.GRANTED
+          ) {
+            return Alert.alert(
+              'Permission denied',
+              'Unable to use P2P Wifi without permission',
+            );
+          }
         }
 
         subscription = subscribeOnPeersUpdates(({devices}) => {
