@@ -7,10 +7,12 @@ buildscript {
         ndkVersion = "26.1.10909125"
         kotlinVersion = "1.9.22"
     }
-    repositories {
+
+     repositories {
         google()
         mavenCentral()
-    }
+        }
+   
     dependencies {
         classpath("com.android.tools.build:gradle")
         classpath("com.facebook.react:react-native-gradle-plugin")
@@ -19,3 +21,13 @@ buildscript {
 }
 
 apply plugin: "com.facebook.react.rootproject"
+
+ allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        maven {
+            // expo-camera bundles a custom com.google.android:cameraview
+            url "$rootDir/../node_modules/expo-camera/android/maven"
+        }
+    } }
