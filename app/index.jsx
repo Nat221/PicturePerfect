@@ -83,7 +83,7 @@ const CameraScreen = () => {
         console.log('Error when getting media stream: ', error);
       }
 
-      peerConnection.onconnectionstatechange = () => {
+      peerConnection.addEventListener('connectionstatechange', event => {
         switch (peerConnection.connectionState) {
           case 'connected':
             console.log('WebRtc connection established. Ready to start stream');
@@ -93,14 +93,16 @@ const CameraScreen = () => {
             break;
           case 'failed':
             console.log('WebRtc connection failed');
+            peerConnection.close();
+            // peerConnection = null;
             break;
           case 'closed':
             console.log('Connection closed');
             break;
         }
-      };
+      });
 
-      peerConnection.onicecandidate = event => {
+      peerConnection.addEventListener('icecandidate', event => {
         console.log('Server candidate', event);
         if (event.candidate) {
           console.log(event.candidate);
@@ -108,36 +110,45 @@ const CameraScreen = () => {
             JSON.stringify({type: 'candidate', candidate: event.candidate}),
           );
         }
-      };
+      });
 
-      peerConnection.onicegatheringstatechange = () => {
+      peerConnection.addEventListener('icegatheringstatechange', event => {
         console.log('Ice gathering state: ', peerConnection.iceGatheringState);
-      };
+      });
 
       socket.on('data', async data => {
-        const receivedData = JSON.parse(data.toString());
-        console.log('RAW DATA: ', data.toString());
+        const messages = data.toString().split('\n');
 
-        try {
-          if (receivedData.type === 'answer') {
-            const answerDescription = new RTCSessionDescription(
-              receivedData.sdp,
-            );
-            await peerConnection.setRemoteDescription(answerDescription);
-            console.log('Remote sdp description set successfully');
-            console.log(
-              'Peer connection ice gathering state : ',
-              peerConnection.iceGatheringState,
-            );
-          }
+        console.log('ANSWER RAW DATA', data.toString());
 
-          if (receivedData.type === 'candidate') {
-            const candidate = new RTCIceCandidate(receivedData.candidate);
-            await peerConnection.addIceCandidate(candidate);
-            console.log('Ice candidate added successfully');
+        for (const message of messages) {
+          if (message.trim() === '') continue;
+          try {
+            const receivedData = JSON.parse(message.trim());
+
+            if (receivedData.type === 'answer') {
+              const answerDescription = new RTCSessionDescription(
+                receivedData.sdp,
+              );
+              await peerConnection.setRemoteDescription(answerDescription);
+              console.log(
+                'Remote sdp description set successfully',
+                peerConnection.remoteDescription,
+              );
+              console.log(
+                'Peer connection ice gathering state : ',
+                peerConnection.iceGatheringState,
+              );
+            }
+
+            if (receivedData.type === 'candidate') {
+              const candidate = new RTCIceCandidate(receivedData.candidate);
+              await peerConnection.addIceCandidate(candidate);
+              console.log('Ice candidate added successfully');
+            }
+          } catch (error) {
+            console.log('Error handling received data', error);
           }
-        } catch (error) {
-          console.log('Error handling received data', error);
         }
       });
 
@@ -177,14 +188,14 @@ const CameraScreen = () => {
         const peerConnection = new RTCPeerConnection(configuration);
         peerConnection.createDataChannel('testChannel');
 
-        peerConnection.ontrack = event => {
+        peerConnection.addEventListener('track', event => {
           console.log('CLIENT STREAM:', event);
           console.log('STREAM', event.streams[0]);
           const receivedStream = event.streams[0];
           setRemoteStream(receivedStream);
-        };
+        });
 
-        peerConnection.onconnectionstatechange = () => {
+        peerConnection.addEventListener('connectionstatechange', event => {
           switch (peerConnection.connectionState) {
             case 'connected':
               console.log('WebRtc connection established');
@@ -194,29 +205,32 @@ const CameraScreen = () => {
               break;
             case 'failed':
               console.log('WebRtc connection failed');
+              peerConnection.close();
+
               break;
             case 'closed':
               console.log('Connection closed');
               break;
           }
-        };
+        });
 
-        peerConnection.onicecandidate = event => {
+        peerConnection.addEventListener('icecandidate', event => {
           console.log('Client candidate', event);
           if (event.candidate) {
             console.log(event.candidate);
             client.write(
-              JSON.stringify({type: 'candidate', candidate: event.candidate}),
+              JSON.stringify({type: 'candidate', candidate: event.candidate}) +
+                '\n',
             );
           }
-        };
+        });
 
-        peerConnection.onicegatheringstatechange = () => {
+        peerConnection.addEventListener('icegatheringstatechange', event => {
           console.log(
             'Ice gathering state: ',
             peerConnection.iceGatheringState,
           );
-        };
+        });
 
         client.on('data', async data => {
           const receivedData = JSON.parse(data.toString());
@@ -237,8 +251,9 @@ const CameraScreen = () => {
                 JSON.stringify({
                   type: 'answer',
                   sdp: peerConnection.localDescription,
-                }),
+                }) + '\n',
               );
+              console.log('ANSWER', peerConnection.localDescription);
 
               while (pendingCandidates.length) {
                 const candidate = pendingCandidates.shift();
