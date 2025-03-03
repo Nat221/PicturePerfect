@@ -1,4 +1,6 @@
 package com.awesomeproject
+import android.os.Bundle
+import com.oney.WebRTCModule.WebRTCModuleOptions
 import expo.modules.ReactActivityDelegateWrapper
 
 import com.facebook.react.ReactActivity
@@ -7,6 +9,14 @@ import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnable
 import com.facebook.react.defaults.DefaultReactActivityDelegate
 
 class MainActivity : ReactActivity() {
+
+   override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        // Enable the WebRTC media projection foreground service
+        val options = WebRTCModuleOptions.getInstance()
+        options.enableMediaProjectionService = true
+    }
 
   /**
    * Returns the name of the main component registered from JavaScript. This is used to schedule
