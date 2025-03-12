@@ -1,4 +1,10 @@
-import {View, Text, Button, TouchableOpacity} from 'react-native';
+import {
+  View,
+  Text,
+  Button,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import React, {useRef, useState, useEffect} from 'react';
 import {useCameraPermissions} from 'expo-camera';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -19,6 +25,7 @@ import {useNetInfo} from '@react-native-community/netinfo';
 // } from 'react-native-webrtc';
 
 import {RTCView} from 'react-native-webrtc';
+// import {hideAsync} from 'expo-splash-screen';
 
 const CameraScreen = () => {
   const [permission, requestPermission] = useCameraPermissions();
@@ -26,9 +33,12 @@ const CameraScreen = () => {
   const {type, isConnected} = useNetInfo();
 
   useEffect(() => {
-    console.log('CONNECTION TYPE:', type);
-    console.log('IS CONNECTED:', isConnected);
-  }, [type, isConnected]);
+    // console.log('CONNECTION TYPE:', type);
+    // console.log('IS CONNECTED:', isConnected);
+    if (permission) {
+      // hideAsync();
+    }
+  }, [permission]);
 
   const {
     updatedInfo,
@@ -41,6 +51,7 @@ const CameraScreen = () => {
     setUpClient,
     isStreaming,
     setIsStreaming,
+    isLoading,
   } = useSetUpTcp();
 
   const {discoveredDevices} = useInitialize(setUpdatedInfo);
@@ -99,13 +110,13 @@ const CameraScreen = () => {
     //   });
   };
 
-  if (!permission) {
-    return <Text>Waiting for Camera Permission</Text>;
-  }
+  // if (!permission) {
+  //   // return <Text>Waiting for Camera Permission</Text>;
+  // }
 
-  if (!permission.granted) {
+  if (!permission?.granted) {
     return (
-      <SafeAreaView style={{flex: 1}}>
+      <SafeAreaView style={{flex: 1, backgroundColor: '#1C1C1E'}}>
         <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
           <Text>No access to camera</Text>
           <Button onPress={requestPermission} title="Request Permission" />
@@ -121,6 +132,14 @@ const CameraScreen = () => {
           justifyContent: 'center',
           alignItems: 'center',
         }}>
+        {!remoteStream && isLoading ? (
+          <View style={{alignItems: 'center'}}>
+            <Text style={{color: 'white', marginBottom: 10}}>
+              Waiting for Stream...
+            </Text>
+            <ActivityIndicator size="large" color="white" />
+          </View>
+        ) : null}
         {remoteStream ? (
           <View style={{flex: 1, width: '100%'}}>
             <RTCView

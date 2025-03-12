@@ -13,6 +13,8 @@ import {
   startDiscoveringPeers,
 } from 'react-native-wifi-p2p';
 
+import SendIntentAndroid from 'react-native-send-intent';
+
 const TcpSocket = require('net');
 
 const useSetUpTcp = () => {
@@ -21,9 +23,11 @@ const useSetUpTcp = () => {
   const [isClientRunning, setIsClientRunning] = useState(false);
   const [remoteStream, setRemoteStream] = useState(null);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const connectionTcpRef = useRef(null);
 
   const initiateStream = async (peerConnection, connectionSocket) => {
+    setIsLoading(true);
     let mediaStream;
     try {
       // localMediaStream = await mediaDevices.getUserMedia({
@@ -107,6 +111,14 @@ const useSetUpTcp = () => {
 
     peerConnection.addEventListener('connectionstatechange', () => {
       console.log('Connection State:', peerConnection.connectionState);
+      if (peerConnection.connectionState === 'connected') {
+        setIsLoading(false);
+        console.log('STATE IS SET TO FALSE');
+        SendIntentAndroid.openCamera().catch(error => {
+          console.log('Error when opening camera:', error);
+        });
+        console.log('OPENING CAMERA FROM STREAMING');
+      }
     });
 
     let buffer = '';
@@ -165,6 +177,7 @@ const useSetUpTcp = () => {
   };
 
   const acceptStream = async (peerConnection, connectionSocket) => {
+    setIsLoading(true);
     const pendingCandidates = [];
     let buffer = '';
     peerConnection.addEventListener('track', event => {
@@ -178,11 +191,7 @@ const useSetUpTcp = () => {
       switch (peerConnection.connectionState) {
         case 'connected':
           console.log('WebRtc connection established');
-          peerConnection.getStats(null).then(stats => {
-            stats.forEach(report => {
-              console.log(report.type, report);
-            });
-          });
+          setIsLoading(false);
           break;
         case 'disconnected':
           console.log('WebRtc connection disconnected');
@@ -341,6 +350,7 @@ const useSetUpTcp = () => {
         setIsServerRunning(false);
         setIsStreaming(false);
         setRemoteStream(null);
+        setIsLoading(false);
 
         getGroupInfo()
           .then(() => {
@@ -418,6 +428,7 @@ const useSetUpTcp = () => {
           setIsClientRunning(false);
           setIsStreaming(false);
           setRemoteStream(null);
+          setIsLoading(false);
           setTimeout(() => {
             startDiscoveringPeers();
             console.log('STARTED DISCOVERING DEVICES...');
@@ -438,6 +449,7 @@ const useSetUpTcp = () => {
     setUpClient,
     isStreaming,
     setIsStreaming,
+    isLoading,
   };
 };
 
