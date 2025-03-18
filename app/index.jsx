@@ -28,17 +28,19 @@ import {RTCView} from 'react-native-webrtc';
 // import {hideAsync} from 'expo-splash-screen';
 
 const CameraScreen = () => {
-  const [permission, requestPermission] = useCameraPermissions();
+  // const [permission, requestPermission] = useCameraPermissions();
 
   const {type, isConnected} = useNetInfo();
 
-  useEffect(() => {
-    // console.log('CONNECTION TYPE:', type);
-    // console.log('IS CONNECTED:', isConnected);
-    if (permission) {
-      // hideAsync();
-    }
-  }, [permission]);
+  // useEffect(() => {
+  //   // console.log('CONNECTION TYPE:', type);
+  //   // console.log('IS CONNECTED:', isConnected);
+  //   console.log('Camera Permission:', permission);
+  //   if (!permission) {
+  //     requestPermission();
+  //     // hideAsync();
+  //   }
+  // }, [permission, requestPermission]);
 
   const {
     updatedInfo,
@@ -114,16 +116,16 @@ const CameraScreen = () => {
   //   // return <Text>Waiting for Camera Permission</Text>;
   // }
 
-  if (!permission?.granted) {
-    return (
-      <SafeAreaView style={{flex: 1, backgroundColor: '#1C1C1E'}}>
-        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-          <Text>No access to camera</Text>
-          <Button onPress={requestPermission} title="Request Permission" />
-        </View>
-      </SafeAreaView>
-    );
-  }
+  // if (!permission?.granted) {
+  //   return (
+  //     <SafeAreaView style={{flex: 1, backgroundColor: '#1C1C1E'}}>
+  //       <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+  //         <Text>No access to camera</Text>
+  //         <Button onPress={requestPermission} title="Request Permission" />
+  //       </View>
+  //     </SafeAreaView>
+  //   );
+  // }
   return (
     <SafeAreaView style={{flex: 1, backgroundColor: '#1C1C1E'}}>
       <View

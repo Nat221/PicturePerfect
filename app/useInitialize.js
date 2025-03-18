@@ -1,6 +1,5 @@
 import {useState, useEffect} from 'react';
-import {PermissionsAndroid, Platform, Alert} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import {PermissionsAndroid, Platform, Linking, Alert} from 'react-native';
 
 import {
   initialize,
@@ -14,18 +13,124 @@ const useInitialize = setUpdatedInfo => {
   const [wifiP2PInitialized, setWifiP2PInitialized] = useState(false);
   const [discoveredDevices, setDiscoveredDevices] = useState([]);
 
-  const storeData = async (key, value) => {
-    try {
-      await AsyncStorage.setItem(key, JSON.stringify(value));
-    } catch (error) {
-      console.log('Error when saving permissions', error.message);
-    }
-  };
-
   useEffect(() => {
     if (wifiP2PInitialized) return;
     let subscription;
     let subscribeConnectionInfo;
+    const requestPermissions = async () => {
+      if (Platform.Version >= 33) {
+        const nearbyWifiDevicesPermissionStatus =
+          await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES,
+          );
+
+        const cameraPermissionStatus = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.CAMERA,
+        );
+
+        // Store permission statuses
+        const finalPermissionsCheck = {
+          'android.permission.NEARBY_WIFI_DEVICES':
+            nearbyWifiDevicesPermissionStatus,
+          'android.permission.CAMERA': cameraPermissionStatus,
+        };
+
+        // Filter out any permissions that were not granted
+        const permissionsStillToBeGranted = Object.entries(
+          finalPermissionsCheck,
+        )
+          .map(([key, value]) => {
+            if (value !== 'granted') {
+              switch (key) {
+                case 'android.permission.ACCESS_COARSE_LOCATION':
+                  return 'Coarse Location';
+                case 'android.permission.ACCESS_BACKGROUND_LOCATION':
+                  return 'Background Location';
+                case 'android.permission.NEARBY_WIFI_DEVICES':
+                  return 'Nearby Wifi Devices';
+                case 'android.permission.CAMERA':
+                  return 'Camera';
+              }
+            }
+            return null;
+          })
+          .filter(Boolean);
+
+        // If any permissions are still denied, prompt the user to open settings
+        if (permissionsStillToBeGranted.length > 0) {
+          return Alert.alert(
+            'Permission required',
+            `Please allow ${
+              permissionsStillToBeGranted.length > 1
+                ? permissionsStillToBeGranted.join(' and ')
+                : permissionsStillToBeGranted[0]
+            } in settings`,
+            [
+              {text: 'Cancel', style: 'cancel'},
+              {
+                text: 'Open Settings',
+                onPress: () => {
+                  Linking.openSettings();
+                },
+              },
+            ],
+          );
+        }
+
+        return true;
+      } else {
+        const fineLocationPermissionStatus = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        );
+        const cameraPermissionStatus = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.CAMERA,
+        );
+        const finalPermissionsCheck = {
+          'android.permission.ACCESS_FINE_LOCATION':
+            fineLocationPermissionStatus,
+          'android.permission.CAMERA': cameraPermissionStatus,
+        };
+
+        const permissionsStillToBeGranted = Object.entries(
+          finalPermissionsCheck,
+        )
+          .map(([key, value]) => {
+            if (value !== 'granted') {
+              switch (key) {
+                case 'android.permission.ACCESS_FINE_LOCATION':
+                  return 'Location';
+                case 'android.permission.CAMERA':
+                  return 'Camera';
+              }
+            }
+            return null;
+          })
+          .filter(Boolean);
+
+        // If any permissions are still denied, prompt the user to open settings
+        if (permissionsStillToBeGranted.length > 0) {
+          return Alert.alert(
+            'Permission required',
+            `Please allow ${
+              permissionsStillToBeGranted.length > 1
+                ? permissionsStillToBeGranted.join(' and ')
+                : permissionsStillToBeGranted[0]
+            } in settings`,
+            [
+              {text: 'Cancel', style: 'cancel'},
+              {
+                text: 'Open Settings',
+                onPress: () => {
+                  Linking.openSettings();
+                },
+              },
+            ],
+          );
+        }
+
+        return true;
+      }
+    };
 
     const initWifiP2P = async () => {
       try {
@@ -33,56 +138,8 @@ const useInitialize = setUpdatedInfo => {
         setWifiP2PInitialized(true);
         console.log('Wifi P2P initialized');
 
-        const requestedPermissions = await AsyncStorage.getItem('permissions');
-
-        console.log('Requested Permissions', requestedPermissions);
-
-        if (!requestedPermissions) {
-          if (Platform.Version >= 33) {
-            const granted = await PermissionsAndroid.requestMultiple([
-              PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
-
-              PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION,
-              PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES,
-            ]);
-            console.log('Still checking for permissions');
-            storeData('permissions', granted);
-
-            if (
-              granted[PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION] !==
-                PermissionsAndroid.RESULTS.GRANTED ||
-              granted[
-                PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION
-              ] !== PermissionsAndroid.RESULTS.GRANTED ||
-              granted[PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES] !==
-                PermissionsAndroid.RESULTS.GRANTED
-            ) {
-              return Alert.alert(
-                'Permission denied',
-                'Unable to use P2P Wifi without permission',
-              );
-            }
-          } else {
-            const granted = await PermissionsAndroid.requestMultiple([
-              PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
-              PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-            ]);
-
-            storeData('permissions', granted);
-
-            if (
-              granted[PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION] !==
-                PermissionsAndroid.RESULTS.GRANTED ||
-              granted[PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION] !==
-                PermissionsAndroid.RESULTS.GRANTED
-            ) {
-              return Alert.alert(
-                'Permission denied',
-                'Unable to use P2P Wifi without permission',
-              );
-            }
-          }
-        }
+        const permissions = await requestPermissions();
+        if (!permissions) return;
 
         subscription = subscribeOnPeersUpdates(({devices}) => {
           console.log('Available devices:', devices);
